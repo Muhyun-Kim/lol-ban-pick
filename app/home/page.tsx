@@ -1,6 +1,8 @@
 import db from "@/lib/db";
 import getSession from "@/lib/session";
 import { notFound, redirect } from "next/navigation";
+import { TestBtn } from "./client-component";
+import { getPuuid } from "./actions";
 
 async function getUser() {
   const session = await getSession();
@@ -18,6 +20,8 @@ async function getUser() {
 }
 
 export default async function Home() {
+  const data = await getPuuid({ gameName: "첫페이지", tagLine: "KR1" });
+  console.log(data);
   const user = await getUser();
   const logout = async () => {
     "use server";
@@ -27,6 +31,7 @@ export default async function Home() {
   };
   return (
     <div>
+      <TestBtn />
       <h1>{user?.account}</h1>
       <form action={logout}>
         <button type="submit">Logout</button>
