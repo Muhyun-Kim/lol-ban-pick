@@ -1,37 +1,36 @@
-import db from "@/lib/db";
-import getSession from "@/lib/session";
-import { notFound, redirect } from "next/navigation";
+"use client";
+
 import { Navbar } from "./client-component";
+import { makeRoom } from "./actions";
+import { useFormState } from "react-dom";
+import { useEffect } from "react";
 
-async function getUser() {
-  const session = await getSession();
-  if (session.id) {
-    const user = await db.user.findUnique({
-      where: {
-        id: session.id,
-      },
-    });
-    if (user) {
-      return user;
-    }
-    notFound();
-  }
-}
-
-export default async function Home() {
-  const user = await getUser();
-  const logout = async () => {
-    "use server";
-    const session = await getSession();
-    session.destroy();
-    redirect("/login");
-  };
+export default function Home() {
+  const [state, dispatch] = useFormState(makeRoom, null);
   return (
     <div className="h-screen flex flex-col items-center pt-24">
       <Navbar />
-      <h1>{user?.account}</h1>
-      <form action={logout}>
-        <button type="submit">Logout</button>
+      <form action={dispatch} className="flex flex-col items-center gap-2">
+        <div className="flex items-center gap-4">
+          <div>
+            <input type="radio" name="ban-pick-type" value="normal" />
+            <label htmlFor="normal">Normal</label>
+          </div>
+          <div>
+            <input type="radio" name="ban-pick-type" value="hardFearless" />
+            <label htmlFor="hard fearless">Hard fearless</label>
+          </div>
+          <div>
+            <input type="radio" name="ban-pick-type" value="softFearless" />
+            <label htmlFor="soft fearless">Soft fearless</label>
+          </div>
+        </div>
+        <button type="submit">make room</button>
+        {state?.fieldErrors?.banPickType?.map((error, index) => (
+          <span key={index} className="text-red-500">
+            {error}
+          </span>
+        ))}
       </form>
     </div>
   );

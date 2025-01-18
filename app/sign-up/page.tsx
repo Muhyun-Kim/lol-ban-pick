@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { signUp } from "./actions";
-import { FormInput } from "../../../components/input";
-import { FormBtn } from "../../../components/btn";
 import { useFormState } from "react-dom";
+import { FormBtn } from "@/components/btn";
+import { FormInput } from "@/components/input";
 
 export default function SignUp() {
   const [state, dispatch] = useFormState(signUp, null);
