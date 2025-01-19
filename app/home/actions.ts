@@ -4,6 +4,7 @@ import db from "@/lib/db";
 import getSession from "@/lib/session";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { v4 as uuidv4 } from "uuid";
 
 const base_url = "https://asia.api.riotgames.com";
 const riotApi = process.env.RIOT_API_KEY;
@@ -85,6 +86,10 @@ export const makeRoom = async (prevstate: any, formData: FormData) => {
   if (!validationResult.success) {
     const err = validationResult.error.flatten();
     return err;
+  } else {
+    const roomName = uuidv4();
+    redirect(
+      `/waiting-room?room_id=${roomName}&room_type=${validationResult.data.banPickType}`
+    );
   }
-  console.log(data);
 };

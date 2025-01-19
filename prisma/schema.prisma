@@ -14,11 +14,30 @@ datasource db {
 }
 
 model User {
-  id              Int      @id @default(autoincrement())
-  account         String   @unique
+  id              Int        @id @default(autoincrement())
+  account         String     @unique
   password        String
-  email           String   @unique
+  email           String     @unique
   riot_account_id String
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+  RoomUser        RoomUser[]
+}
+
+model BanPickRoom {
+  id         Int        @id
+  room_type  String
+  room_name  String     @unique
+  room_owner Int
+  users      RoomUser[]
+  created_at DateTime   @default(now())
+}
+
+model RoomUser {
+  roomId Int
+  userId Int
+  room   BanPickRoom @relation(fields: [roomId], references: [id])
+  user   User        @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, userId])
 }
