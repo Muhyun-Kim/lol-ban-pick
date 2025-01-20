@@ -3,7 +3,6 @@
 import { Navbar } from "./client-component";
 import { makeRoom } from "./actions";
 import { useFormState } from "react-dom";
-import { useEffect } from "react";
 
 export default function Home() {
   const [state, dispatch] = useFormState(makeRoom, null);

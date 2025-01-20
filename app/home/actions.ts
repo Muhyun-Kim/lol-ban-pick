@@ -76,11 +76,15 @@ export const logout = async () => {
 
 const makeRoomSchema = z.object({
   banPickType: z.string({ required_error: "Ban pick type is required" }),
+  user: z.object({
+    id: z.number({ required_error: "Cant find user" }),
+  }),
 });
 
 export const makeRoom = async (prevstate: any, formData: FormData) => {
   const data = {
     banPickType: formData.get("ban-pick-type"),
+    user: await getUser(),
   };
   const validationResult = await makeRoomSchema.safeParseAsync(data);
   if (!validationResult.success) {
@@ -88,6 +92,23 @@ export const makeRoom = async (prevstate: any, formData: FormData) => {
     return err;
   } else {
     const roomName = uuidv4();
+    const room = await db.banPickRoom.create({
+      data: {
+        room_name: roomName,
+        room_type: validationResult.data.banPickType,
+        room_owner: validationResult.data.user.id,
+      },
+      select: {
+        room_name: true,
+        room_owner: true,
+      },
+    });
+    const roomUser = await db.roomUser.create({
+      data: {
+        room_name: room.room_name,
+        user_id: room.room_owner,
+      },
+    });
     redirect(
       `/waiting-room?room_id=${roomName}&room_type=${validationResult.data.banPickType}`
     );
