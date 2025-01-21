@@ -14,30 +14,33 @@ datasource db {
 }
 
 model User {
-  id              Int        @id @default(autoincrement())
-  account         String     @unique
+  id              Int           @id @default(autoincrement())
+  account         String        @unique
   password        String
-  email           String     @unique
+  email           String        @unique
   riot_account_id String
-  created_at      DateTime   @default(now())
-  updated_at      DateTime   @updatedAt
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
   RoomUser        RoomUser[]
+  BanPickRooms    BanPickRoom[] @relation("RoomOwner")
 }
 
 model BanPickRoom {
-  id         Int        @id
+  id         Int        @id @default(autoincrement())
   room_type  String
   room_name  String     @unique
   room_owner Int
+  owner      User       @relation("RoomOwner", fields: [room_owner], references: [id])
   users      RoomUser[]
   created_at DateTime   @default(now())
 }
 
 model RoomUser {
-  roomId Int
-  userId Int
-  room   BanPickRoom @relation(fields: [roomId], references: [id])
-  user   User        @relation(fields: [userId], references: [id])
+  id      Int         @id @default(autoincrement())
+  room_id Int
+  user_id Int
+  room    BanPickRoom @relation(fields: [room_id], references: [id])
+  user    User        @relation(fields: [user_id], references: [id])
 
-  @@unique([roomId, userId])
+  @@unique([room_id, user_id])
 }
