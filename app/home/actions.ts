@@ -103,14 +103,8 @@ export const makeRoom = async (prevstate: any, formData: FormData) => {
         room_owner: true,
       },
     });
-    const roomUser = await db.roomUser.create({
-      data: {
-        room_name: room.room_name,
-        user_id: room.room_owner,
-      },
-    });
     redirect(
-      `/waiting-room?room_id=${roomName}&room_type=${validationResult.data.banPickType}`
+      `/waiting-room?room_id=${room.room_name}&room_type=${validationResult.data.banPickType}`
     );
   }
 };
