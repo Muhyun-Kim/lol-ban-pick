@@ -1,11 +1,24 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { checkRoomId, getRoomOwner } from "./actions";
+import { useEffect, useRef, useState } from "react";
+import { getRoomOwner } from "./actions";
 import { io, Socket } from "socket.io-client";
+import { User } from "@prisma/client";
+import { getUser } from "../home/actions";
 
-let socket: Socket;
+// let socket: Socket;
+
+interface Participant {
+  userId: number;
+  name: string;
+  team: "red" | "blue";
+  socketId?: string;
+}
+
+interface UserJoinedEvent {
+  joinedUser: Participant;
+}
 
 export default function WaitingRoom() {
   const router = useRouter();
@@ -16,6 +29,10 @@ export default function WaitingRoom() {
   const roomType = searchParams.get("room_type");
   const [copied, setCopied] = useState(false);
   const [roomOwner, setRoomOwner] = useState<string>("");
+  const [user, setUser] = useState<User | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+
+  const [participants, setParticipants] = useState<Participant[]>([]);
 
   useEffect(() => {
     const checkRoomValid = async () => {
@@ -29,33 +46,63 @@ export default function WaitingRoom() {
           alert("invalid room id");
         }
         setRoomOwner(res!.owner.account);
+        const user = await getUser();
+        if (user) {
+          setUser(user);
+        }
+        const socket = io("http://localhost:3001");
+        socketRef.current = socket;
+        socket.on("connect", () => {
+          setIsConnected(true);
+        });
+        const participant: Participant = {
+          userId: user?.id!,
+          name: user?.account!,
+          team: "red",
+        };
+        socket.emit("joinRoom", { roomId: roomName, participant });
+
+        socket.on("userJoined", (data: Participant[]) => {
+          console.log("userJoined", data);
+          setParticipants(data);
+        });
+
+        socket.on("userLeft", ({ userSocketId }) => {
+          console.log("userLeft", userSocketId);
+          setParticipants((prev) =>
+            prev.filter((p) => p.socketId !== userSocketId)
+          );
+          console.log("participants", participants);
+        });
+
+        return () => {
+          if (socketRef.current) {
+            socketRef.current.emit("leaveRoom", roomName);
+            socketRef.current.disconnect();
+          }
+        };
       }
     };
     checkRoomValid();
-    socket = io("http://localhost:3001");
-    socket.on("connect", () => {
-      console.log("Connected to WebSocket server:", socket.id);
-      setIsConnected(true);
-    });
-    socket.emit("joinRoom", roomName);
+  }, []);
 
-    socket.on("userJoined", (data) => {
-      console.log("user joined", data);
-    });
+  useEffect(() => {
+    console.log("now participants:", participants);
+  }, [participants]);
 
-    socket.on("userLeft", ({ userId }) => {
-      console.log("user left", userId);
-    });
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (roomName) {
+        console.log(`Leaving room: ${roomName}`);
+      }
+    };
 
-    socket.on("test", (data) => {
-      console.log(data);
-    });
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      socket.emit("leaveRoom", roomName);
-      socket.disconnect();
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, []);
+  }, [roomName]);
 
   const handleCopyUrl = () => {
     const currentUrl = window.location.href;
@@ -64,9 +111,19 @@ export default function WaitingRoom() {
     setTimeout(() => setCopied(false), 3000);
   };
 
-  const handleWebsocket = () => {
+  const leaveRoom = () => {
+    if (socketRef.current && isConnected) {
+      socketRef.current.emit("leaveRoom", roomName);
+      socketRef.current.disconnect();
+    } else {
+      console.error("Socket is not initialized or not connected!");
+    }
+  };
+
+  const handleExitRoom = () => {
     if (isConnected) {
-      socket.emit("test", { test: "test" });
+      leaveRoom();
+      router.back();
     }
   };
 
@@ -93,7 +150,7 @@ export default function WaitingRoom() {
           <ParticipantBox />
         </div>
       </div>
-      <button onClick={handleWebsocket}>test</button>
+      <button onClick={handleExitRoom}>방 나가기</button>
     </div>
   );
 }
