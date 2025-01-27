@@ -10,6 +10,8 @@ let socket: Socket;
 export default function WaitingRoom() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isConnected, setIsConnected] = useState(false);
+
   const roomName = searchParams.get("room_id");
   const roomType = searchParams.get("room_type");
   const [copied, setCopied] = useState(false);
@@ -31,6 +33,10 @@ export default function WaitingRoom() {
     };
     checkRoomValid();
     socket = io("http://localhost:3001");
+    socket.on("connect", () => {
+      console.log("Connected to WebSocket server:", socket.id);
+      setIsConnected(true);
+    });
     socket.emit("joinRoom", roomName);
 
     socket.on("userJoined", (data) => {
@@ -39,6 +45,10 @@ export default function WaitingRoom() {
 
     socket.on("userLeft", ({ userId }) => {
       console.log("user left", userId);
+    });
+
+    socket.on("test", (data) => {
+      console.log(data);
     });
 
     return () => {
@@ -52,6 +62,12 @@ export default function WaitingRoom() {
     navigator.clipboard.writeText(currentUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
+  };
+
+  const handleWebsocket = () => {
+    if (isConnected) {
+      socket.emit("test", { test: "test" });
+    }
   };
 
   return (
@@ -77,6 +93,7 @@ export default function WaitingRoom() {
           <ParticipantBox />
         </div>
       </div>
+      <button onClick={handleWebsocket}>test</button>
     </div>
   );
 }

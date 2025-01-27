@@ -21,6 +21,11 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("userLeft", { userId: socket.id });
   });
 
+  socket.on("test", (data) => {
+    console.log("test", data);
+    socket.emit("test", { test: "ok" });
+  });
+
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
   });
