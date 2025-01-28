@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import * as http from "http";
+import { JoinRoomReq, Participant } from "./app/waiting-room/page";
 
 const server = http.createServer();
 const io = new Server(server, {
@@ -7,16 +8,13 @@ const io = new Server(server, {
     origin: "*",
   },
 });
-interface Participant {
-  userId: number;
-  name: string;
-  team: "red" | "blue";
-  socketId?: string;
+
+export interface UserLeftReq {
+  socketId: string;
 }
 
-interface JoinRoomPayload {
-  roomId: string;
-  participant: Participant;
+export interface UserJoinedReq {
+  joinedParticipants: Participant;
 }
 
 const rooms: { [key: string]: Participant[] } = {};
@@ -24,7 +22,7 @@ const rooms: { [key: string]: Participant[] } = {};
 io.on("connection", (socket) => {
   console.log("user connected");
 
-  socket.on("joinRoom", ({ roomId, participant }: JoinRoomPayload) => {
+  socket.on("joinRoom", ({ roomId, participant }: JoinRoomReq) => {
     if (!rooms[roomId]) {
       rooms[roomId] = [];
     } else {
@@ -33,28 +31,23 @@ io.on("connection", (socket) => {
       );
       if (!isExist) {
         participant.socketId = socket.id;
+        const isRedMore =
+          rooms[roomId].filter((p) => p.team == "red").length >
+          rooms[roomId].filter((p) => p.team == "blue").length;
+        participant.team = isRedMore ? "blue" : "red";
         rooms[roomId].push(participant);
       }
     }
     socket.join(roomId);
-    io.to(roomId).emit("userJoined", { participants: rooms[roomId] });
+    io.to(roomId).emit("userJoined", { joinedParticipants: rooms[roomId] });
     console.log("rooms", rooms);
-  });
-
-  socket.on("leaveRoom", (roomId) => {
-    socket.leave(roomId);
-    rooms[roomId] = rooms[roomId].filter((p) => p.socketId !== socket.id);
-    io.to(roomId).emit("userLeft", { userId: socket.id });
-    if (rooms[roomId].length === 0) {
-      delete rooms[roomId];
-    }
   });
 
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
     for (const roomId in rooms) {
       rooms[roomId] = rooms[roomId].filter((p) => p.socketId !== socket.id);
-      io.to(roomId).emit("userLeft", { userId: socket.id });
+      io.to(roomId).emit("userLeft", { socketId: socket.id } as UserLeftReq);
       if (rooms[roomId].length === 0) {
         delete rooms[roomId];
       }

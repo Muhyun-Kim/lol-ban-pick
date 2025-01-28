@@ -6,18 +6,20 @@ import { getRoomOwner } from "./actions";
 import { io, Socket } from "socket.io-client";
 import { User } from "@prisma/client";
 import { getUser } from "../home/actions";
+import { UserJoinedReq, UserLeftReq } from "@/server";
 
 // let socket: Socket;
 
-interface Participant {
+export interface Participant {
   userId: number;
   name: string;
-  team: "red" | "blue";
+  team?: "red" | "blue";
   socketId?: string;
 }
 
-interface UserJoinedEvent {
-  joinedUser: Participant;
+export interface JoinRoomReq {
+  roomId: string;
+  participant: Participant;
 }
 
 export default function WaitingRoom() {
@@ -58,26 +60,31 @@ export default function WaitingRoom() {
         const participant: Participant = {
           userId: user?.id!,
           name: user?.account!,
-          team: "red",
         };
-        socket.emit("joinRoom", { roomId: roomName, participant });
+        socket.emit("joinRoom", {
+          roomId: roomName,
+          participant,
+        } as JoinRoomReq);
 
-        socket.on("userJoined", (data: Participant[]) => {
-          console.log("userJoined", data);
-          setParticipants(data);
+        socket.on("userJoined", (data) => {
+          setParticipants(data.joinedParticipants);
         });
 
-        socket.on("userLeft", ({ userSocketId }) => {
-          console.log("userLeft", userSocketId);
-          setParticipants((prev) =>
-            prev.filter((p) => p.socketId !== userSocketId)
-          );
-          console.log("participants", participants);
+        socket.on("userLeft", (data: UserLeftReq) => {
+          console.log("userLeft", data.socketId);
+
+          setParticipants((prev) => {
+            if (!Array.isArray(prev)) {
+              console.error("Participants state is not an array:", prev);
+              return prev;
+            }
+
+            return prev.filter((p) => p.socketId !== data.socketId);
+          });
         });
 
         return () => {
           if (socketRef.current) {
-            socketRef.current.emit("leaveRoom", roomName);
             socketRef.current.disconnect();
           }
         };
@@ -85,24 +92,6 @@ export default function WaitingRoom() {
     };
     checkRoomValid();
   }, []);
-
-  useEffect(() => {
-    console.log("now participants:", participants);
-  }, [participants]);
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (roomName) {
-        console.log(`Leaving room: ${roomName}`);
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [roomName]);
 
   const handleCopyUrl = () => {
     const currentUrl = window.location.href;
@@ -113,7 +102,6 @@ export default function WaitingRoom() {
 
   const leaveRoom = () => {
     if (socketRef.current && isConnected) {
-      socketRef.current.emit("leaveRoom", roomName);
       socketRef.current.disconnect();
     } else {
       console.error("Socket is not initialized or not connected!");
@@ -125,6 +113,10 @@ export default function WaitingRoom() {
       leaveRoom();
       router.back();
     }
+  };
+
+  const test = () => {
+    console.log(participants);
   };
 
   return (
@@ -151,6 +143,7 @@ export default function WaitingRoom() {
         </div>
       </div>
       <button onClick={handleExitRoom}>방 나가기</button>
+      <button onClick={test}>test</button>
     </div>
   );
 }
