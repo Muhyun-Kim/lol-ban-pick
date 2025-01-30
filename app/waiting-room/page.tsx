@@ -82,7 +82,6 @@ export default function WaitingRoom() {
             return prev.filter((p) => p.socketId !== data.socketId);
           });
         });
-
         return () => {
           if (socketRef.current) {
             socketRef.current.disconnect();
@@ -115,6 +114,10 @@ export default function WaitingRoom() {
     }
   };
 
+  const onClickParticipantBtn = () => {
+    console.log("참가 버튼 클릭");
+  };
+
   const test = () => {
     console.log(participants);
   };
@@ -128,18 +131,49 @@ export default function WaitingRoom() {
       {copied && <span>room number copied clipboard</span>}
       <div id="team" className="flex w-1/2 justify-between mt-10">
         <div id="blue" className="flex flex-col gap-4 w-2/5">
-          <UserBox name="user1" />
-          <UserBox name="user2" />
-          <UserBox name="user3" />
-          <UserBox name="user4" />
-          <UserBox name="user5" />
+          <span>Blue Team</span>
+          {participants
+            .filter((p) => p.team === "blue")
+            .map((p) => (
+              <UserBox name={p.name} />
+            ))}
+          {Array.from(
+            {
+              length: 5 - participants.filter((p) => p.team === "blue").length,
+            },
+            (_, i) => (
+              <ParticipantBox
+                onClickParticipantBtn={() => {
+                  console.log("blue");
+                  console.log(user);
+                  console.log(participants);
+                  setParticipants((prev) => {
+                    return prev.map((p) =>
+                      p.userId === user?.id
+                        ? { ...p, team: p.team === "blue" ? "red" : "blue" }
+                        : p
+                    );
+                  });
+                }}
+              />
+            )
+          )}
         </div>
         <div id="red" className="flex flex-col gap-4 w-2/5">
-          <UserBox name="user1" />
-          <UserBox name="user2" />
-          <UserBox name="user3" />
-          <UserBox name="user4" />
-          <ParticipantBox />
+          <span>Red Team</span>
+          {participants
+            .filter((p) => p.team === "red")
+            .map((p) => (
+              <UserBox name={p.name} />
+            ))}
+          {Array.from(
+            {
+              length: 5 - participants.filter((p) => p.team === "red").length,
+            },
+            (_, i) => (
+              <ParticipantBox onClickParticipantBtn={onClickParticipantBtn} />
+            )
+          )}
         </div>
       </div>
       <button onClick={handleExitRoom}>방 나가기</button>
@@ -160,10 +194,17 @@ function UserBox({ name }: UserBoxProps) {
   );
 }
 
-function ParticipantBox() {
+interface ParticipantBoxProps {
+  onClickParticipantBtn: () => void;
+}
+
+function ParticipantBox({ onClickParticipantBtn }: ParticipantBoxProps) {
   return (
     <div className="flex h-16 w-full items-center justify-end px-8 border border-gray-400 rounded-lg">
-      <button className="py-1 px-2 border bg-gray-300 border-gray-400 rounded-lg text-black hover:bg-gray-400">
+      <button
+        className="py-1 px-2 border bg-gray-300 border-gray-400 rounded-lg text-black hover:bg-gray-400"
+        onClick={onClickParticipantBtn}
+      >
         참가
       </button>
     </div>
