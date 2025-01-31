@@ -1,6 +1,6 @@
 import { Server } from "socket.io";
 import * as http from "http";
-import { JoinRoomReq, Participant } from "./app/waiting-room/page";
+import { ChangeTeam, JoinRoomReq, Participant } from "./app/waiting-room/page";
 
 const server = http.createServer();
 const io = new Server(server, {
@@ -41,6 +41,19 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     io.to(roomId).emit("userJoined", { joinedParticipants: rooms[roomId] });
     console.log("rooms", rooms);
+  });
+
+  socket.on("changeTeam", ({ roomId, user, team }: ChangeTeam) => {
+    if (roomId && user) {
+      const updateRooms = rooms[roomId].map((p) => {
+        if (p.userId === user.id && p.team !== team) {
+          return { ...p, team };
+        }
+        return p;
+      });
+      rooms[roomId] = updateRooms;
+      io.to(roomId).emit("userJoined", { joinedParticipants: rooms[roomId] });
+    }
   });
 
   socket.on("disconnect", () => {

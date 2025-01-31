@@ -6,20 +6,26 @@ import { getRoomOwner } from "./actions";
 import { io, Socket } from "socket.io-client";
 import { User } from "@prisma/client";
 import { getUser } from "../home/actions";
-import { UserJoinedReq, UserLeftReq } from "@/server";
+import { UserLeftReq } from "@/server";
 
-// let socket: Socket;
+export type Team = "blue" | "red";
 
 export interface Participant {
   userId: number;
   name: string;
-  team?: "red" | "blue";
+  team?: Team;
   socketId?: string;
 }
 
 export interface JoinRoomReq {
   roomId: string;
   participant: Participant;
+}
+
+export interface ChangeTeam {
+  roomId?: string;
+  user?: User;
+  team: Team;
 }
 
 export default function WaitingRoom() {
@@ -82,6 +88,7 @@ export default function WaitingRoom() {
             return prev.filter((p) => p.socketId !== data.socketId);
           });
         });
+
         return () => {
           if (socketRef.current) {
             socketRef.current.disconnect();
@@ -114,8 +121,22 @@ export default function WaitingRoom() {
     }
   };
 
-  const onClickParticipantBtn = () => {
+  const onClickParticipantBtn = (team: Team) => {
     console.log("참가 버튼 클릭");
+
+    if (socketRef.current && isConnected && user) {
+      // 1. send user info to websocket-server
+      socketRef.current.emit("changeTeam", {
+        roomId: roomName,
+        user,
+        team,
+      } as ChangeTeam);
+      // 2. change user team in participants list
+      // 3. get participants list from websocket-server
+      // 4. update participants list state
+    } else {
+      console.error("Socket is not initialized or not connected!");
+    }
   };
 
   const test = () => {
@@ -135,7 +156,7 @@ export default function WaitingRoom() {
           {participants
             .filter((p) => p.team === "blue")
             .map((p) => (
-              <UserBox name={p.name} />
+              <UserBox key={p.name} name={p.name} />
             ))}
           {Array.from(
             {
@@ -143,18 +164,8 @@ export default function WaitingRoom() {
             },
             (_, i) => (
               <ParticipantBox
-                onClickParticipantBtn={() => {
-                  console.log("blue");
-                  console.log(user);
-                  console.log(participants);
-                  setParticipants((prev) => {
-                    return prev.map((p) =>
-                      p.userId === user?.id
-                        ? { ...p, team: p.team === "blue" ? "red" : "blue" }
-                        : p
-                    );
-                  });
-                }}
+                key={`blue-${i}`}
+                onClickParticipantBtn={() => onClickParticipantBtn("blue")}
               />
             )
           )}
@@ -164,14 +175,19 @@ export default function WaitingRoom() {
           {participants
             .filter((p) => p.team === "red")
             .map((p) => (
-              <UserBox name={p.name} />
+              <UserBox key={p.name} name={p.name} />
             ))}
           {Array.from(
             {
               length: 5 - participants.filter((p) => p.team === "red").length,
             },
             (_, i) => (
-              <ParticipantBox onClickParticipantBtn={onClickParticipantBtn} />
+              <ParticipantBox
+                key={`red-${i}`}
+                onClickParticipantBtn={() => {
+                  onClickParticipantBtn("red");
+                }}
+              />
             )
           )}
         </div>
