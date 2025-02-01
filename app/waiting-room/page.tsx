@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { getRoomOwner } from "./actions";
+import { getRoomOwner, inputUserToRoom } from "./actions";
 import { io, Socket } from "socket.io-client";
 import { User } from "@prisma/client";
 import { getUser } from "../home/actions";
@@ -26,6 +26,10 @@ export interface ChangeTeam {
   roomId?: string;
   user?: User;
   team: Team;
+}
+
+export interface StartBanPick {
+  roomId: string;
 }
 
 export default function WaitingRoom() {
@@ -74,6 +78,10 @@ export default function WaitingRoom() {
 
         socket.on("userJoined", (data) => {
           setParticipants(data.joinedParticipants);
+        });
+
+        socket.on("banPickStarted", () => {
+          router.push(`/ban-pick?room_id=${roomName}&room_type=${roomType}`);
         });
 
         socket.on("userLeft", (data: UserLeftReq) => {
@@ -125,22 +133,28 @@ export default function WaitingRoom() {
     console.log("참가 버튼 클릭");
 
     if (socketRef.current && isConnected && user) {
-      // 1. send user info to websocket-server
       socketRef.current.emit("changeTeam", {
         roomId: roomName,
         user,
         team,
       } as ChangeTeam);
-      // 2. change user team in participants list
-      // 3. get participants list from websocket-server
-      // 4. update participants list state
     } else {
       console.error("Socket is not initialized or not connected!");
     }
   };
 
-  const test = () => {
-    console.log(participants);
+  const startBanPick = async () => {
+    if (!roomName) {
+      alert("invalid room id");
+    }
+    const result = await inputUserToRoom({ roomName: roomName!, participants });
+    if (!result) {
+      alert("failed to input user to room");
+      return;
+    }
+    socketRef.current?.emit("startBanPick", {
+      roomId: roomName,
+    } as StartBanPick);
   };
 
   return (
@@ -193,7 +207,9 @@ export default function WaitingRoom() {
         </div>
       </div>
       <button onClick={handleExitRoom}>방 나가기</button>
-      <button onClick={test}>test</button>
+      {roomOwner === user?.account && (
+        <button onClick={startBanPick}>밴픽시작</button>
+      )}
     </div>
   );
 }

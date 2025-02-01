@@ -1,6 +1,11 @@
 import { Server } from "socket.io";
 import * as http from "http";
-import { ChangeTeam, JoinRoomReq, Participant } from "./app/waiting-room/page";
+import {
+  ChangeTeam,
+  JoinRoomReq,
+  Participant,
+  StartBanPick,
+} from "./app/waiting-room/page";
 
 const server = http.createServer();
 const io = new Server(server, {
@@ -54,6 +59,10 @@ io.on("connection", (socket) => {
       rooms[roomId] = updateRooms;
       io.to(roomId).emit("userJoined", { joinedParticipants: rooms[roomId] });
     }
+  });
+
+  socket.on("startBanPick", ({ roomId }: StartBanPick) => {
+    io.to(roomId).emit("banPickStarted");
   });
 
   socket.on("disconnect", () => {
