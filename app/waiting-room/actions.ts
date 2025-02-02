@@ -2,6 +2,7 @@
 
 import db from "@/lib/db";
 import { Participant } from "./page";
+import { z } from "zod";
 
 interface CheckRoomIdParams {
   roomId: string;
@@ -46,6 +47,28 @@ export const getRoomOwner = async ({ roomId, roomType }: CheckRoomIdParams) => {
   }
 };
 
+const inputUserToRoomSchema = z.object({
+  roomName: z.string(),
+  participants: z
+    .array(
+      z.object({
+        userId: z.number(),
+        team: z.enum(["red", "blue"]),
+      })
+    )
+    .superRefine((participants, ctx) => {
+      if (participants.length > 2) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.too_small,
+          minimum: 2,
+          type: "array",
+          inclusive: true,
+          message: "Participants array must have at least 2 members",
+        });
+      }
+    }),
+});
+
 interface InputUserToRoomParams {
   roomName: string;
   participants: Participant[];
@@ -54,11 +77,17 @@ export const inputUserToRoom = async ({
   roomName,
   participants,
 }: InputUserToRoomParams) => {
-  console.log("start inputUserToRoom");
+  const validationResult = inputUserToRoomSchema.safeParse({
+    roomName,
+    participants,
+  });
+  if (!validationResult.success) {
+    return null;
+  }
   try {
     const room = await db.banPickRoom.findUnique({
       where: {
-        room_name: roomName,
+        room_name: validationResult.data.roomName,
       },
       select: {
         id: true,
@@ -68,7 +97,7 @@ export const inputUserToRoom = async ({
       return null;
     }
     const result = await db.roomUser.createMany({
-      data: participants.map((p) => ({
+      data: validationResult.data.participants.map((p) => ({
         user_id: p.userId,
         room_id: room.id,
         team: p.team,
