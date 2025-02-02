@@ -14,6 +14,9 @@ const io = new Server(server, {
   },
 });
 
+const waitingRoom = io.of("/waiting-room");
+const banPickRoom = io.of("/ban-pick-room");
+
 export interface UserLeftReq {
   socketId: string;
 }
@@ -24,7 +27,7 @@ export interface UserJoinedReq {
 
 const rooms: { [key: string]: Participant[] } = {};
 
-io.on("connection", (socket) => {
+waitingRoom.on("connection", (socket) => {
   console.log("user connected");
 
   socket.on("joinRoom", ({ roomId, participant }: JoinRoomReq) => {
@@ -44,7 +47,9 @@ io.on("connection", (socket) => {
       }
     }
     socket.join(roomId);
-    io.to(roomId).emit("userJoined", { joinedParticipants: rooms[roomId] });
+    waitingRoom
+      .to(roomId)
+      .emit("userJoined", { joinedParticipants: rooms[roomId] });
     console.log("rooms", rooms);
   });
 
@@ -57,24 +62,35 @@ io.on("connection", (socket) => {
         return p;
       });
       rooms[roomId] = updateRooms;
-      io.to(roomId).emit("userJoined", { joinedParticipants: rooms[roomId] });
+      waitingRoom
+        .to(roomId)
+        .emit("userJoined", { joinedParticipants: rooms[roomId] });
     }
   });
 
   socket.on("startBanPick", ({ roomId }: StartBanPick) => {
-    io.to(roomId).emit("banPickStarted");
+    waitingRoom.to(roomId).emit("banPickStarted");
   });
 
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
     for (const roomId in rooms) {
       rooms[roomId] = rooms[roomId].filter((p) => p.socketId !== socket.id);
-      io.to(roomId).emit("userLeft", { socketId: socket.id } as UserLeftReq);
+      waitingRoom
+        .to(roomId)
+        .emit("userLeft", { socketId: socket.id } as UserLeftReq);
       if (rooms[roomId].length === 0) {
         delete rooms[roomId];
       }
     }
     console.log("left rooms", rooms);
+  });
+});
+
+banPickRoom.on("connection", (socket) => {
+  console.log("banPickRoom connected");
+  socket.on("disconnect", () => {
+    console.log(`User disconnected: ${socket.id}`);
   });
 });
 

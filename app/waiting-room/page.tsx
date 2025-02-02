@@ -62,7 +62,7 @@ export default function WaitingRoom() {
         if (user) {
           setUser(user);
         }
-        const socket = io("http://localhost:3001");
+        const socket = io("http://localhost:3001/waiting-room");
         socketRef.current = socket;
         socket.on("connect", () => {
           setIsConnected(true);
