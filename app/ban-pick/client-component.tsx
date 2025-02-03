@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import clsx from "clsx";
 
 interface ChampionData {
   id: string;
   key: string;
   name: string;
   image: string;
+  isBanned: boolean;
 }
 
 export function ChampionList() {
@@ -16,6 +18,8 @@ export function ChampionList() {
     ChampionData[]
   >([]);
   const [championName, setChampionName] = useState<string>("");
+  const [banChamp, setBanChamp] = useState<string>("");
+
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     setChampionName(e.target.value);
@@ -39,6 +43,7 @@ export function ChampionList() {
             key: champion.key,
             name: champion.name,
             image: champion.image.full,
+            isBanned: false,
           };
         })
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -55,12 +60,24 @@ export function ChampionList() {
         onChange={onChange}
         className="text-black"
       />
-      <div className="w-full grid grid-cols-6 gap-2 gap-y-8 justify-items-center">
+      <div className="w-full max-h-[650px] min-h-[650px] p-4 grid grid-cols-6 gap-2 gap-y-8 justify-items-center border-2 overflow-y-auto border-white">
         {filteredChampionDataList.map((championData) => {
           return (
             <div
               key={championData.id}
-              className="h-22 w-22 flex flex-col items-center gap-2"
+              role="button"
+              className={clsx(
+                "h-22 w-22 flex flex-col items-center gap-2 transition duration-300 hover:brightness-50",
+                {
+                  "brightness-50":
+                    championData.id === banChamp || championData.isBanned,
+                }
+              )}
+              // className={clsx("p-4 border", { "bg-blue-500 text-white": isActive, "bg-gray-200": !isActive })}
+              id={championData.id}
+              onClick={() => {
+                setBanChamp(championData.id);
+              }}
             >
               <Image
                 alt={championData.name}
@@ -73,6 +90,19 @@ export function ChampionList() {
           );
         })}
       </div>
+      <button
+        className="bg-blue-500 text-white p-2 rounded-md w-80"
+        onClick={() => {
+          setChampionDataList((prev) =>
+            prev.map((c) => (c.id === banChamp ? { ...c, isBanned: true } : c))
+          );
+          setFilteredChampionDataList((prev) =>
+            prev.map((c) => (c.id === banChamp ? { ...c, isBanned: true } : c))
+          );
+        }}
+      >
+        <span>선택</span>
+      </button>
     </div>
   );
 }
