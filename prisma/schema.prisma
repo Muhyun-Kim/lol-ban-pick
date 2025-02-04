@@ -14,34 +14,51 @@ datasource db {
 }
 
 model User {
-  id              Int           @id @default(autoincrement())
-  account         String        @unique
+  id              Int              @id @default(autoincrement())
+  account         String           @unique
   password        String
-  email           String        @unique
+  email           String           @unique
   riot_account_id String
-  created_at      DateTime      @default(now())
-  updated_at      DateTime      @updatedAt
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
   RoomUser        RoomUser[]
-  BanPickRooms    BanPickRoom[] @relation("RoomOwner")
+  BanPickRooms    BanPickRoom[]    @relation("RoomOwner")
+  BannedChampion  BannedChampion[]
 }
 
 model BanPickRoom {
-  id         Int        @id @default(autoincrement())
-  room_type  String
-  room_name  String     @unique
-  room_owner Int
-  owner      User       @relation("RoomOwner", fields: [room_owner], references: [id])
-  users      RoomUser[]
-  created_at DateTime   @default(now())
+  id             Int              @id @default(autoincrement())
+  room_type      String
+  room_name      String           @unique
+  room_owner     Int
+  owner          User             @relation("RoomOwner", fields: [room_owner], references: [id])
+  users          RoomUser[]
+  created_at     DateTime         @default(now())
+  BannedChampion BannedChampion[]
 }
 
 model RoomUser {
-  id      Int         @id @default(autoincrement())
-  room_id Int
-  user_id Int
-  team    String?
-  room    BanPickRoom @relation(fields: [room_id], references: [id])
-  user    User        @relation(fields: [user_id], references: [id])
+  id             Int             @id @default(autoincrement())
+  room_id        Int
+  user_id        Int
+  team           String?
+  round_number   Int             @default(1)
+  room           BanPickRoom     @relation(fields: [room_id], references: [id])
+  user           User            @relation(fields: [user_id], references: [id])
+  BannedChampion BannedChampion?
+
+  @@unique([room_id, user_id])
+}
+
+model BannedChampion {
+  id       Int         @id @default(autoincrement())
+  ChampId  String
+  team     String?
+  room_id  Int
+  user_id  Int
+  room     BanPickRoom @relation(fields: [room_id], references: [id])
+  user     User        @relation(fields: [user_id], references: [id])
+  RoomUser RoomUser    @relation(fields: [room_id, user_id], references: [room_id, user_id])
 
   @@unique([room_id, user_id])
 }
