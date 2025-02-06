@@ -6,7 +6,7 @@ import { getRoomOwner, inputUserToRoom } from "./actions";
 import { io, Socket } from "socket.io-client";
 import { User } from "@prisma/client";
 import { getUser } from "../home/actions";
-import { UserLeftReq } from "@/server";
+import { BanPickRoomId, UserLeftReq } from "@/server";
 
 export type Team = "blue" | "red";
 
@@ -30,6 +30,7 @@ export interface ChangeTeam {
 
 export interface StartBanPick {
   roomId: string;
+  banPickRoomId?: number;
 }
 
 export default function WaitingRoom() {
@@ -80,8 +81,8 @@ export default function WaitingRoom() {
           setParticipants(data.joinedParticipants);
         });
 
-        socket.on("banPickStarted", () => {
-          router.push(`/ban-pick?room_id=${roomName}&room_type=${roomType}`);
+        socket.on("banPickStarted", ({ banPickRoomId }: BanPickRoomId) => {
+          router.push(`/ban-pick?ban_pick_room_id=${banPickRoomId}`);
         });
 
         socket.on("userLeft", (data: UserLeftReq) => {
@@ -154,6 +155,7 @@ export default function WaitingRoom() {
     }
     socketRef.current?.emit("startBanPick", {
       roomId: roomName,
+      banPickRoomId: result,
     } as StartBanPick);
   };
 

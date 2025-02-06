@@ -25,6 +25,10 @@ export interface UserJoinedReq {
   joinedParticipants: Participant;
 }
 
+export interface BanPickRoomId {
+  banPickRoomId: number;
+}
+
 const rooms: { [key: string]: Participant[] } = {};
 
 waitingRoom.on("connection", (socket) => {
@@ -68,8 +72,12 @@ waitingRoom.on("connection", (socket) => {
     }
   });
 
-  socket.on("startBanPick", ({ roomId }: StartBanPick) => {
-    waitingRoom.to(roomId).emit("banPickStarted");
+  socket.on("startBanPick", ({ roomId, banPickRoomId }: StartBanPick) => {
+    waitingRoom
+      .to(roomId)
+      .emit("banPickStarted", {
+        banPickRoomId: banPickRoomId,
+      } as BanPickRoomId);
   });
 
   socket.on("disconnect", () => {

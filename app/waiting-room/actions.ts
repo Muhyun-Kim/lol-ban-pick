@@ -103,7 +103,7 @@ export const inputUserToRoom = async ({
         team: p.team,
       })),
     });
-    return result;
+    return room.id;
   } catch (e) {
     console.error(e);
     return null;
