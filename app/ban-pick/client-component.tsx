@@ -3,6 +3,10 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
+import { User } from "@prisma/client";
+import { getUser } from "../home/actions";
+import { useSearchParams } from "next/navigation";
+import { getRoomInfo } from "./actions";
 
 interface ChampionData {
   id: string;
@@ -13,12 +17,19 @@ interface ChampionData {
 }
 
 export function ChampionList() {
+  const searchParams = useSearchParams();
+  const banPickRoomId = searchParams.get("ban_pick_room_id");
+  const [user, setUser] = useState<User | null>(null);
+  const [ownerId, setOwnerId] = useState<number | null>(null);
+
   const [championDataList, setChampionDataList] = useState<ChampionData[]>([]);
   const [filteredChampionDataList, setFilteredChampionDataList] = useState<
     ChampionData[]
   >([]);
   const [championName, setChampionName] = useState<string>("");
   const [banChamp, setBanChamp] = useState<string>("");
+  const [redBanChamps, setRedBanChamps] = useState<string[]>([]);
+  const [blueBanChamps, setBlueBanChamps] = useState<string[]>([]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
@@ -51,6 +62,25 @@ export function ChampionList() {
       setFilteredChampionDataList(championList);
     };
     fetchChampionData();
+    const fetchRoomInfo = async () => {
+      const fetchedUser = await getUser();
+      if (!user) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+      setUser(user);
+      if (!banPickRoomId || !Number(banPickRoomId)) {
+        alert("방 정보가 없습니다.");
+        return;
+      }
+      const fetchedRoomInfo = await getRoomInfo(Number(banPickRoomId));
+      if (!fetchedRoomInfo) {
+        alert("방 정보가 없습니다.");
+        return;
+      }
+      const roomOwnerId = fetchedRoomInfo.roomInfo.room_owner;
+      setOwnerId(roomOwnerId);
+    };
   }, []);
   return (
     <div className="flex flex-col items-center w-1/2 p-20 px-28 gap-12">
