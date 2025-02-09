@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { User } from "@prisma/client";
 import { getUser } from "../home/actions";
 import { useSearchParams } from "next/navigation";
 import { getRoomInfo } from "./actions";
+import { io, Socket } from "socket.io-client";
 
 interface ChampionData {
   id: string;
@@ -30,6 +31,8 @@ export function ChampionList() {
   const [banChamp, setBanChamp] = useState<string>("");
   const [redBanChamps, setRedBanChamps] = useState<string[]>([]);
   const [blueBanChamps, setBlueBanChamps] = useState<string[]>([]);
+
+  const socketRef = useRef<Socket | null>(null);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
@@ -80,6 +83,8 @@ export function ChampionList() {
       }
       const roomOwnerId = fetchedRoomInfo.roomInfo.room_owner;
       setOwnerId(roomOwnerId);
+      const socket = io("http://localhost:3001/ban-pick");
+      socketRef.current = socket;
     };
     fetchRoomInfo();
   }, []);
